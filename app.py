@@ -116,7 +116,7 @@ elif choice == "🎨 À propos":
     st.markdown("""
     Ce projet Streamlit prédit si un patient est diabétique à partir de données médicales.
 
-    Réalisé avec 💡 par un étudiant en science des données.  
+    Réalisé avec par Lina Boussaada & Meriem Trabelsi
     Techniques utilisées : Random Forest, Normalisation, Feature Engineering, Clustering, Visualisation.
 
     Contact : [ISI@Tunis.com]
