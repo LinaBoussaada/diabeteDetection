@@ -5,7 +5,9 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 
-# ---------- Données et Modèle ----------
+st.set_page_config(page_title="Diabète Predictor", layout="wide")
+
+# Chargement du modèle
 @st.cache_data
 def load_model():
     model = RandomForestClassifier()
@@ -26,20 +28,24 @@ def load_model():
 
 model, scaler, columns, data = load_model()
 
-# ---------- Interface ----------
-st.set_page_config(page_title="Prédiction Diabète", layout="wide")
-st.sidebar.title("🧭 Navigation")
-choice = st.sidebar.radio("Aller vers", [
-    "🏠 Prédiction",
-    "📈 Explication du modèle",
-    "🔁 Simulation de scénario",
-    "🗂️ Historique personnel",
-    "💬 ChatBot éducatif",
-    "🎨 À propos"
-])
+# Logo
+st.image("logo.png", width=120)
 
-# ---------- Page 1 : Prédiction ----------
-if choice == "🏠 Prédiction":
+# Navigation horizontale
+pages = ["🏠 Accueil", "📈 Modèle", "🔁 Scénario", "🗂️ Historique", "💬 ChatBot", "🎨 À propos"]
+col_nav = st.columns(len(pages))
+if "page" not in st.session_state:
+    st.session_state.page = pages[0]
+
+for i, p in enumerate(pages):
+    if col_nav[i].button(p):
+        st.session_state.page = p
+
+# Contenus des pages
+page = st.session_state.page
+
+# Page 1 : Accueil (prédiction)
+if page == "🏠 Accueil":
     st.title("🧠 Prédiction du Diabète")
     input_data = []
     for col in columns:
@@ -52,28 +58,28 @@ if choice == "🏠 Prédiction":
         prediction = model.predict(input_scaled)[0]
         st.success("✅ Diabétique" if prediction == 1 else "❎ Non Diabétique")
 
-# ---------- Page 2 : Explication du modèle ----------
-elif choice == "📈 Explication du modèle":
+# Page 2 : Explication du modèle
+elif page == "📈 Modèle":
     st.title("📊 Explication du Modèle Random Forest")
     importances = model.feature_importances_
     feature_df = pd.DataFrame({'Feature': columns, 'Importance': importances})
     feature_df = feature_df.sort_values(by='Importance', ascending=False)
     st.bar_chart(feature_df.set_index('Feature'))
 
-# ---------- Page 3 : Simulation de scénario ----------
-elif choice == "🔁 Simulation de scénario":
+# Page 3 : Simulation de scénario
+elif page == "🔁 Scénario":
     st.title("🔍 Simulation : impact d'une variable")
     selected_feature = st.selectbox("Choisir une variable à modifier", columns)
     base_input = [data[col].median() for col in columns]
-    values = st.slider(f"Valeur de {selected_feature}", 0.0, 200.0, float(base_input[columns.get_loc(selected_feature)]), 1.0)
+    value = st.slider(f"Valeur de {selected_feature}", 0.0, 200.0, float(base_input[columns.get_loc(selected_feature)]), 1.0)
 
-    base_input[columns.get_loc(selected_feature)] = values
+    base_input[columns.get_loc(selected_feature)] = value
     input_array = np.array(base_input).reshape(1, -1)
     prediction = model.predict(scaler.transform(input_array))[0]
     st.write(f"🔎 Résultat simulé : {'✅ Diabétique' if prediction == 1 else '❎ Non Diabétique'}")
 
-# ---------- Page 4 : Historique personnel ----------
-elif choice == "🗂️ Historique personnel":
+# Page 4 : Historique
+elif page == "🗂️ Historique":
     st.title("🧾 Historique de prédictions")
     if "history" not in st.session_state:
         st.session_state.history = []
@@ -93,8 +99,8 @@ elif choice == "🗂️ Historique personnel":
         df = pd.DataFrame(st.session_state.history, columns=list(columns) + ["Résultat"])
         st.dataframe(df)
 
-# ---------- Page 5 : ChatBot éducatif ----------
-elif choice == "💬 ChatBot éducatif":
+# Page 5 : Chatbot
+elif page == "💬 ChatBot":
     st.title("💬 ChatBot : Questions fréquentes")
     faq = {
         "Quels sont les symptômes du diabète ?":
@@ -110,14 +116,14 @@ elif choice == "💬 ChatBot éducatif":
     if st.button("Répondre"):
         st.info(faq[question])
 
-# ---------- Page 6 : À propos ----------
-elif choice == "🎨 À propos":
+# Page 6 : À propos
+elif page == "🎨 À propos":
     st.title("📝 À propos de ce projet")
     st.markdown("""
     Ce projet Streamlit prédit si un patient est diabétique à partir de données médicales.
 
-    Réalisé avec par Lina Boussaada & Meriem Trabelsi
+    Réalisé avec 💡 par Lina Boussaada & Meriem Trabelsi
     Techniques utilisées : Random Forest, Normalisation, Feature Engineering, Clustering, Visualisation.
 
-    Contact : [ISI@Tunis.com]
+    Contact : [ing_idl@isi.com]
     """)
