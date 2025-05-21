@@ -564,7 +564,7 @@ st.markdown("""
 if "active_tab" not in st.session_state:
     st.session_state.active_tab = "prediction"
 
-# Utiliser st.query_params au lieu de st.experimental_get_query_params
+# Utiliser st.query_params au lieu de st.query_params
 tab = st.query_params.get("tab", ["prediction"])[0] if isinstance(st.query_params.get("tab"), list) else st.query_params.get("tab", "prediction")
 st.session_state.active_tab = tab
 
