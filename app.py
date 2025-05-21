@@ -2456,7 +2456,7 @@ with col2:
     
 
 
-    Ce projet a été réalisé avec 💡 par **Lina Boussaada & Meriem Trabelsi** dans le cadre d'un projet étudiant à l'ISI.
+    Ce projet a été réalisé avec  par **Lina Boussaada & Meriem Trabelsi** dans le cadre d'un projet étudiant à l'ISI.
 
 
     
