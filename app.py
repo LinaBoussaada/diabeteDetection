@@ -1,9 +1,11 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 
+# ---------- Données et Modèle ----------
 @st.cache_data
 def load_model():
     model = RandomForestClassifier()
@@ -20,19 +22,102 @@ def load_model():
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     model.fit(X_scaled, y)
-    return model, scaler, X.columns
+    return model, scaler, X.columns, data
 
-model, scaler, columns = load_model()
+model, scaler, columns, data = load_model()
 
-st.title("🧠 Prédiction du Diabète")
+# ---------- Interface ----------
+st.set_page_config(page_title="Prédiction Diabète", layout="wide")
+st.sidebar.title("🧭 Navigation")
+choice = st.sidebar.radio("Aller vers", [
+    "🏠 Prédiction",
+    "📈 Explication du modèle",
+    "🔁 Simulation de scénario",
+    "🗂️ Historique personnel",
+    "💬 ChatBot éducatif",
+    "🎨 À propos"
+])
 
-input_data = []
-for col in columns:
-    val = st.number_input(f"{col}", value=0.0)
-    input_data.append(val)
+# ---------- Page 1 : Prédiction ----------
+if choice == "🏠 Prédiction":
+    st.title("🧠 Prédiction du Diabète")
+    input_data = []
+    for col in columns:
+        val = st.number_input(f"{col}", value=0.0)
+        input_data.append(val)
 
-if st.button("Prédire"):
-    input_array = np.array(input_data).reshape(1, -1)
-    input_scaled = scaler.transform(input_array)
-    prediction = model.predict(input_scaled)[0]
-    st.success("Diabétique" if prediction == 1 else "Non Diabétique")
+    if st.button("Prédire"):
+        input_array = np.array(input_data).reshape(1, -1)
+        input_scaled = scaler.transform(input_array)
+        prediction = model.predict(input_scaled)[0]
+        st.success("✅ Diabétique" if prediction == 1 else "❎ Non Diabétique")
+
+# ---------- Page 2 : Explication du modèle ----------
+elif choice == "📈 Explication du modèle":
+    st.title("📊 Explication du Modèle Random Forest")
+    importances = model.feature_importances_
+    feature_df = pd.DataFrame({'Feature': columns, 'Importance': importances})
+    feature_df = feature_df.sort_values(by='Importance', ascending=False)
+    st.bar_chart(feature_df.set_index('Feature'))
+
+# ---------- Page 3 : Simulation de scénario ----------
+elif choice == "🔁 Simulation de scénario":
+    st.title("🔍 Simulation : impact d'une variable")
+    selected_feature = st.selectbox("Choisir une variable à modifier", columns)
+    base_input = [data[col].median() for col in columns]
+    values = st.slider(f"Valeur de {selected_feature}", 0.0, 200.0, float(base_input[columns.get_loc(selected_feature)]), 1.0)
+
+    base_input[columns.get_loc(selected_feature)] = values
+    input_array = np.array(base_input).reshape(1, -1)
+    prediction = model.predict(scaler.transform(input_array))[0]
+    st.write(f"🔎 Résultat simulé : {'✅ Diabétique' if prediction == 1 else '❎ Non Diabétique'}")
+
+# ---------- Page 4 : Historique personnel ----------
+elif choice == "🗂️ Historique personnel":
+    st.title("🧾 Historique de prédictions")
+    if "history" not in st.session_state:
+        st.session_state.history = []
+
+    input_data = []
+    for col in columns:
+        val = st.number_input(f"{col}", value=0.0, key=f"history_{col}")
+        input_data.append(val)
+
+    if st.button("Ajouter au journal"):
+        input_array = np.array(input_data).reshape(1, -1)
+        pred = model.predict(scaler.transform(input_array))[0]
+        result = "Diabétique" if pred == 1 else "Non diabétique"
+        st.session_state.history.append(input_data + [result])
+
+    if st.session_state.history:
+        df = pd.DataFrame(st.session_state.history, columns=list(columns) + ["Résultat"])
+        st.dataframe(df)
+
+# ---------- Page 5 : ChatBot éducatif ----------
+elif choice == "💬 ChatBot éducatif":
+    st.title("💬 ChatBot : Questions fréquentes")
+    faq = {
+        "Quels sont les symptômes du diabète ?":
+            "Fatigue, soif excessive, mictions fréquentes, vision floue.",
+        "Comment prévenir le diabète ?":
+            "Avoir une alimentation équilibrée, faire de l'exercice régulièrement et surveiller son poids.",
+        "Quel est un taux de glycémie normal ?":
+            "À jeun : entre 70 et 99 mg/dL (3.9 à 5.5 mmol/L).",
+        "Quels aliments éviter ?":
+            "Évitez les sucres rapides, boissons sucrées, fast food, aliments ultra-transformés."
+    }
+    question = st.selectbox("Posez une question :", list(faq.keys()))
+    if st.button("Répondre"):
+        st.info(faq[question])
+
+# ---------- Page 6 : À propos ----------
+elif choice == "🎨 À propos":
+    st.title("📝 À propos de ce projet")
+    st.markdown("""
+    Ce projet Streamlit prédit si un patient est diabétique à partir de données médicales.
+
+    Réalisé avec 💡 par un étudiant en science des données.  
+    Techniques utilisées : Random Forest, Normalisation, Feature Engineering, Clustering, Visualisation.
+
+    Contact : [ISI@Tunis.com]
+    """)
