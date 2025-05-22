@@ -5,6 +5,16 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from PIL import Image
 
+# ---------- Initialisation du chatbot ----------
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+
+if 'show_chat' not in st.session_state:
+    st.session_state.show_chat = False
+
+def add_to_chat(role, message):
+    st.session_state.chat_history.append({"role": role, "message": message})
+
 # ---------- Données et Modèle ----------
 @st.cache_data
 def load_model():
@@ -52,21 +62,105 @@ choice = st.sidebar.radio("Menu", [
     "📊 Analyse du modèle",
     "🔬 Simulation médicale",
     "📋 Dossier patient",
-    "❓ FAQ Diabète",
     "ℹ️ À propos"
 ])
+
+# ---------- Bouton ChatBot flottant ----------
+chat_button = st.sidebar.button("💬 Assistance Médicale", help="Poser une question à notre assistant virtuel")
+
+if chat_button:
+    st.session_state.show_chat = not st.session_state.show_chat
+
+# ---------- Fonctionnalité du ChatBot ----------
+def medical_chatbot():
+    st.markdown("""
+    <style>
+    .chatbox {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 350px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        z-index: 1000;
+        padding: 15px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .chat-header {
+        background: #2b5876;
+        color: white;
+        padding: 10px;
+        border-radius: 8px 8px 0 0;
+        margin: -15px -15px 10px -15px;
+    }
+    .user-message {
+        background: #e3f2fd;
+        padding: 8px 12px;
+        border-radius: 10px;
+        margin: 5px 0;
+        max-width: 80%;
+        float: right;
+        clear: both;
+    }
+    .bot-message {
+        background: #f1f1f1;
+        padding: 8px 12px;
+        border-radius: 10px;
+        margin: 5px 0;
+        max-width: 80%;
+        float: left;
+        clear: both;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.show_chat:
+        st.markdown(f"""
+        <div class="chatbox">
+            <div class="chat-header">
+                <h4>💬 Assistant Diabète</h4>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Afficher l'historique du chat
+        for chat in st.session_state.chat_history:
+            if chat["role"] == "user":
+                st.markdown(f'<div class="user-message">{chat["message"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="bot-message">{chat["message"]}</div>', unsafe_allow_html=True)
+
+        # Nouveau message
+        user_input = st.text_input("Posez votre question...", key="chat_input", label_visibility="collapsed")
+        
+        if user_input:
+            add_to_chat("user", user_input)
+            
+            # Réponses prédéfinies du chatbot
+            responses = {
+                "symptômes": "Les symptômes courants du diabète incluent soif excessive, mictions fréquentes, fatigue, vision floue et cicatrisation lente.",
+                "prévention": "Pour prévenir le diabète : 1) Maintenez un poids santé 2) Faites de l'exercice régulièrement 3) Adoptez une alimentation équilibrée 4) Évitez le tabac",
+                "alimentation": "Privilégiez les légumes verts, céréales complètes, protéines maigres. Évitez les sucres rapides et aliments transformés.",
+                "urgence": "En cas de symptômes sévères (confusion, perte de conscience), contactez immédiatement les urgences médicales.",
+                "diagnostic": "Le diagnostic se fait par test sanguin (glycémie à jeun, HbA1c). Consultez un médecin pour une évaluation précise."
+            }
+            
+            # Trouver la meilleure réponse
+            response = "Je suis un assistant médical virtuel. Pour des conseils personnalisés, veuillez consulter un professionnel de santé."
+            for key in responses:
+                if key in user_input.lower():
+                    response = responses[key]
+                    break
+            
+            add_to_chat("bot", response)
+            st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------- Page 1 : Prédiction ----------
 if choice == "🩺 Prédiction":
     st.title("🩺 Prédiction du Risque Diabétique")
-    st.markdown("""
-    <style>
-    .stNumberInput>label {
-        font-size: 14px;
-        color: #2b5876;
-    }
-    </style>
-    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     input_data = []
@@ -87,155 +181,56 @@ if choice == "🩺 Prédiction":
         prediction = model.predict(input_scaled)[0]
         if prediction == 1:
             st.error("⚠️ Risque élevé de diabète détecté")
-            st.markdown("""
-            **Recommandations immédiates :**
-            - Consultez un médecin rapidement
-            - Surveillez votre glycémie régulièrement
-            - Adoptez une alimentation équilibrée
-            """)
         else:
             st.success("✅ Risque faible de diabète")
-            st.markdown("""
-            **Conseils de prévention :**
-            - Maintenez une activité physique régulière
-            - Faites des bilans sanguins annuels
-            - Limitez les sucres raffinés
-            """)
 
 # ---------- Page 2 : Analyse du modèle ----------
 elif choice == "📊 Analyse du modèle":
     st.title("📊 Analyse du Modèle Prédictif")
-    st.markdown("""
-    **Méthodologie :** Random Forest avec Feature Engineering
-    """)
-    
-    tab1, tab2 = st.tabs(["Importance des variables", "Performance"])
-    
-    with tab1:
-        importances = model.feature_importances_
-        feature_df = pd.DataFrame({'Variable': columns, 'Importance': importances})
-        feature_df = feature_df.sort_values(by='Importance', ascending=False)
-        st.bar_chart(feature_df.set_index('Variable'))
-    
-    with tab2:
-        st.write("Matrice de confusion (exemple sur données d'entraînement):")
-        # Ici vous pourriez ajouter une vraie évaluation
-        st.image("https://miro.medium.com/v2/resize:fit:1400/1*Z54JgbS4DUwWSknhDCvNTQ.png", width=400)
+    importances = model.feature_importances_
+    feature_df = pd.DataFrame({'Variable': columns, 'Importance': importances})
+    feature_df = feature_df.sort_values(by='Importance', ascending=False)
+    st.bar_chart(feature_df.set_index('Variable'))
 
 # ---------- Page 3 : Simulation médicale ----------
 elif choice == "🔬 Simulation médicale":
     st.title("🔬 Simulation d'Impact Clinique")
-    st.info("Modifiez une variable pour voir son impact sur le risque diabétique")
-    
     selected_feature = st.selectbox("Paramètre clinique", columns)
     base_value = float(data[selected_feature].median())
-    min_val = float(data[selected_feature].min())
-    max_val = float(data[selected_feature].max())
-    
-    values = st.slider(
-        f"Valeur de {selected_feature}",
-        min_val, max_val, base_value, 
-        step=(max_val-min_val)/100,
-        help="Ajustez pour voir l'impact sur la prédiction"
-    )
+    values = st.slider(f"Valeur de {selected_feature}", 0.0, 200.0, base_value, 1.0)
 
     base_input = [data[col].median() for col in columns]
     base_input[columns.get_loc(selected_feature)] = values
     input_array = np.array(base_input).reshape(1, -1)
     prediction = model.predict(scaler.transform(input_array))[0]
-    
-    st.metric("Risque de diabète", "Élevé" if prediction == 1 else "Faible")
-    st.progress(prediction * 100 if prediction == 1 else 30)
+    st.write(f"🔎 Résultat simulé : {'⚠️ Risque élevé' if prediction == 1 else '✅ Risque faible'}")
 
 # ---------- Page 4 : Dossier patient ----------
 elif choice == "📋 Dossier patient":
     st.title("📋 Dossier Médical Personnel")
     if "history" not in st.session_state:
         st.session_state.history = []
-    
-    st.subheader("Nouvelle entrée")
+
     input_data = []
     cols = st.columns(2)
-    
     for i, col in enumerate(columns):
         with cols[i % 2]:
             val = st.number_input(f"{col}", value=0.0, key=f"hist_{col}")
             input_data.append(val)
-    
+
     if st.button("💾 Enregistrer l'analyse"):
         input_array = np.array(input_data).reshape(1, -1)
         pred = model.predict(scaler.transform(input_array))[0]
         result = "Risque élevé" if pred == 1 else "Risque faible"
         st.session_state.history.append(input_data + [result])
         st.toast("Analyse enregistrée avec succès")
-    
-    if st.session_state.history:
-        st.subheader("Historique des analyses")
-        df = pd.DataFrame(st.session_state.history, columns=list(columns) + ["Résultat"])
-        st.dataframe(df.style.highlight_max(axis=0), use_container_width=True)
-        
-        if st.button("📤 Exporter les données"):
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button("💾 Télécharger CSV", csv, "historique_diabete.csv", "text/csv")
 
-# ---------- Page 5 : FAQ Diabète ----------
-elif choice == "❓ FAQ Diabète":
-    st.title("❓ Foire Aux Questions Médicales")
-    
-    faq = {
-        "Quels sont les symptômes du diabète ?": {
-            "answer": "Fatigue, soif excessive, mictions fréquentes, vision floue, cicatrisation lente.",
-            "icon": "🆘"
-        },
-        "Comment prévenir le diabète ?": {
-            "answer": "1. Alimentation équilibrée\n2. Activité physique régulière\n3. Contrôle du poids\n4. Bilan sanguin annuel",
-            "icon": "🛡️"
-        },
-        "Quel est un taux de glycémie normal ?": {
-            "answer": "À jeun : 0.70 à 1.10 g/L (3.9 à 6.1 mmol/L)\nAprès repas : < 1.40 g/L (7.8 mmol/L)",
-            "icon": "📉"
-        },
-        "Quels aliments privilégier ?": {
-            "answer": "Légumes verts, céréales complètes, poissons gras, fruits à faible IG (pommes, baies), noix.",
-            "icon": "🥗"
-        }
-    }
-    
-    selected_question = st.selectbox("Sélectionnez une question", list(faq.keys()))
-    
-    st.markdown(f"""
-    <div style="background:#f0f2f6;padding:15px;border-radius:10px;margin-top:10px;">
-        <h4>{faq[selected_question]['icon']} {selected_question}</h4>
-        <p>{faq[selected_question]['answer']}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ---------- Page 6 : À propos ----------
+# ---------- Page 5 : À propos ----------
 elif choice == "ℹ️ À propos":
     st.title("ℹ️ À Propos de DiabPredict")
-    
-    st.image("https://img.freepik.com/vecteurs-libre/conception-logo-hopital_23-2149610211.jpg", width=150)
-    
     st.markdown("""
-    <div style="background:#f0f2f6;padding:20px;border-radius:10px;">
-        <h3 style="color:#2b5876;">Notre Mission</h3>
-        <p>Fournir un outil prédictif accessible pour l'évaluation précoce du risque diabétique.</p>
-        
-        <h3 style="color:#2b5876;margin-top:20px;">Fonctionnalités Clés</h3>
-        <ul>
-            <li>Analyse basée sur l'IA (Random Forest)</li>
-            <li>Simulation d'impact des facteurs de risque</li>
-            <li>Suivi personnel des analyses</li>
-            <li>Ressources éducatives sur le diabète</li>
-        </ul>
-        
-        <h3 style="color:#2b5876;margin-top:20px;">Avertissement</h3>
-        <p style="color:red;font-style:italic;">
-        Cet outil ne remplace pas un diagnostic médical professionnel. 
-        Consultez toujours un médecin pour une évaluation complète.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    st.write("© 2023 DiabPredict - Tous droits réservés")
+    Ce projet Streamlit prédit si un patient est diabétique à partir de données médicales.
+    """)
+
+# ---------- Afficher le chatbot sur toutes les pages ----------
+medical_chatbot()
