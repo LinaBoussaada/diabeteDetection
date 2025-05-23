@@ -76,6 +76,10 @@ def load_model():
         (data['BMI'] > 35) | 
         (data['Age'] > 60)
     ).astype(int)
+# Ajout de features engineered
+    data['Glucose_to_BMI'] = data['Glucose'] / data['BMI']
+    data['Insulin_to_Glucose'] = data['Insulin'] / (data['Glucose'] + 1)
+    data['Is_Elderly'] = (data['Age'] > 50).astype(int)
     
     model = RandomForestClassifier(n_estimators=100, random_state=42)
     X = data.drop(['Outcome'], axis=1)
@@ -110,7 +114,9 @@ st.sidebar.markdown("""
 st.sidebar.title("Navigation")
 choice = st.sidebar.radio("Menu", [
     "🩺 Prédiction",
-    "📊 Analyse",
+    "📊 Analyse du modèle",
+    "🔬 Simulation médicale",
+    "📋 Dossier patient",
     "🤖 Assistant IA",
     "ℹ️ À propos"
 ])
@@ -158,99 +164,159 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- Page de prédiction ----------
+# ---------- Page 1 : Prédiction ----------
 if choice == "🩺 Prédiction":
-    st.title("🩺 Évaluation du Risque Diabétique")
-    st.markdown("""
-    <div style="background-color:#f0f8ff; padding:15px; border-radius:10px; margin-bottom:20px;">
-        <b>Note :</b> Ce modèle prédictif est fourni à titre informatif uniquement. 
-        Les résultats ne constituent pas un diagnostic médical.
-    </div>
-    """, unsafe_allow_html=True)
+    st.title("🩺 Prédiction du Risque Diabétique")
+    st.markdown("### Saisissez vos paramètres médicaux pour évaluer votre risque")
     
     col1, col2 = st.columns(2)
+    input_data = []
     
-    # Dictionnaire des descriptions des paramètres
-    param_descriptions = {
-        'Pregnancies': "Nombre de grossesses (0 si homme)",
-        'Glucose': "Concentration de glucose plasmatique (mg/dL)",
-        'BloodPressure': "Pression artérielle diastolique (mmHg)",
-        'SkinThickness': "Épaisseur du pli cutané tricipital (mm)",
-        'Insulin': "Insulinémie à jeun (μU/mL)",
-        'BMI': "Indice de masse corporelle (kg/m²)",
-        'DiabetesPedigreeFunction': "Fonction pedigree diabétique",
-        'Age': "Âge (années)"
+    # Configuration des champs avec descriptions
+    field_descriptions = {
+        'Pregnancies': 'Nombre de grossesses',
+        'Glucose': 'Taux de glucose (mg/dL)',
+        'BloodPressure': 'Pression artérielle diastolique (mmHg)',
+        'SkinThickness': 'Épaisseur du pli cutané tricipital (mm)',
+        'Insulin': 'Insuline sérique (mu U/ml)',
+        'BMI': 'Indice de masse corporelle (kg/m²)',
+        'DiabetesPedigreeFunction': 'Fonction pedigree diabétique',
+        'Age': 'Âge (années)',
+        'Glucose_to_BMI': 'Ratio Glucose/IMC',
+        'Insulin_to_Glucose': 'Ratio Insuline/Glucose',
+        'Is_Elderly': 'Senior (>50 ans) : 0=Non, 1=Oui'
     }
     
-    input_data = []
     with col1:
-        for param in columns[:4]:
-            input_data.append(st.number_input(
-                param_descriptions.get(param, param),
-                min_value=0.0,
-                value=float(data[param].median()),
-                key=f"input_{param}")
-            )
+        for i, col in enumerate(columns[:len(columns)//2]):
+            desc = field_descriptions.get(col, col)
+            if col == 'Is_Elderly':
+                val = st.selectbox(desc, [0, 1], key=f"input_{col}")
+            else:
+                val = st.number_input(desc, value=float(data[col].median()), min_value=0.0, step=0.1, key=f"input_{col}")
+            input_data.append(val)
     
     with col2:
-        for param in columns[4:]:
-            input_data.append(st.number_input(
-                param_descriptions.get(param, param),
-                min_value=0.0,
-                value=float(data[param].median()),
-                key=f"input_{param}"
-            ))
-    
-    if st.button("Évaluer le risque", type="primary"):
+        for i, col in enumerate(columns[len(columns)//2:]):
+            desc = field_descriptions.get(col, col)
+            if col == 'Is_Elderly':
+                val = st.selectbox(desc, [0, 1], key=f"input_{col}")
+            else:
+                val = st.number_input(desc, value=float(data[col].median()), min_value=0.0, step=0.1, key=f"input_{col}")
+            input_data.append(val)
+
+    if st.button("🔍 Analyser le risque", type="primary"):
         input_array = np.array(input_data).reshape(1, -1)
         input_scaled = scaler.transform(input_array)
         prediction = model.predict(input_scaled)[0]
-        probability = model.predict_proba(input_scaled)[0][1]
-        
-        st.markdown("---")
-        st.subheader("Résultats de l'évaluation")
+        probability = model.predict_proba(input_scaled)[0]
         
         if prediction == 1:
-            st.error(f"⚠️ Risque élevé de diabète (Probabilité: {probability:.1%})")
-            st.markdown("""
-            **Recommandations :**
-            - Consultez un médecin rapidement
-            - Faites vérifier votre glycémie
-            - Adoptez une alimentation équilibrée
-            - Pratiquez une activité physique régulière
-            """)
+            st.error(f"⚠️ Risque élevé de diabète détecté (Probabilité: {probability[1]:.2%})")
+            st.markdown("**Recommandations:**")
+            st.markdown("- Consultez rapidement un médecin")
+            st.markdown("- Adoptez une alimentation équilibrée")
+            st.markdown("- Pratiquez une activité physique régulière")
         else:
-            st.success(f"✅ Risque faible de diabète (Probabilité: {1-probability:.1%})")
-            st.markdown("""
-            **Conseils de prévention :**
-            - Maintenez un poids santé
-            - Limitez les sucres ajoutés
-            - Faites des bilans réguliers
-            """)
+            st.success(f"✅ Risque faible de diabète (Probabilité: {probability[0]:.2%})")
+            st.markdown("**Conseils de prévention:**")
+            st.markdown("- Maintenez un mode de vie sain")
+            st.markdown("- Surveillez régulièrement votre glycémie")
 
-# ---------- Page d'analyse ----------
-elif choice == "📊 Analyse":
-    st.title("📊 Analyse des Facteurs de Risque")
+# ---------- Page 2 : Analyse du modèle ----------
+elif choice == "📊 Analyse du modèle":
+    st.title("📊 Analyse du Modèle Prédictif")
+    st.markdown("### Importance des variables dans la prédiction")
     
-    # Importance des caractéristiques
     importances = model.feature_importances_
-    importance_df = pd.DataFrame({
-        'Paramètre': columns,
-        'Importance': importances
-    }).sort_values('Importance', ascending=False)
+    feature_df = pd.DataFrame({'Variable': columns, 'Importance': importances})
+    feature_df = feature_df.sort_values(by='Importance', ascending=False)
     
-    st.subheader("Importance relative des paramètres")
-    st.bar_chart(importance_df.set_index('Paramètre'))
+    st.bar_chart(feature_df.set_index('Variable'))
     
-    # Explications des paramètres
-    st.subheader("Explications des paramètres")
-    with st.expander("Détails des paramètres médicaux"):
-        for param in columns:
-            st.markdown(f"**{param}**")
-            st.markdown(param_descriptions.get(param, "Pas de description disponible"))
-            st.markdown(f"- Valeur médiane : {data[param].median():.1f}")
-            st.markdown(f"- Plage typique : {data[param].min():.1f} à {data[param].max():.1f}")
-            st.markdown("---")
+    st.markdown("### Top 5 des facteurs les plus importants")
+    for i, row in feature_df.head().iterrows():
+        st.write(f"**{row['Variable']}**: {row['Importance']:.3f}")
+
+# ---------- Page 3 : Simulation médicale ----------
+elif choice == "🔬 Simulation médicale":
+    st.title("🔬 Simulation d'Impact Clinique")
+    st.markdown("### Analysez l'impact d'un paramètre spécifique")
+    
+    selected_feature = st.selectbox("Sélectionnez un paramètre clinique", columns)
+    base_value = float(data[selected_feature].median())
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        values = st.slider(f"Valeur de {selected_feature}", 
+                          float(data[selected_feature].min()), 
+                          float(data[selected_feature].max()), 
+                          base_value, 0.1)
+    
+    with col2:
+        st.metric("Valeur médiane normale", f"{base_value:.1f}")
+        st.metric("Valeur sélectionnée", f"{values:.1f}")
+
+    base_input = [data[col].median() for col in columns]
+    base_input[list(columns).index(selected_feature)] = values
+    input_array = np.array(base_input).reshape(1, -1)
+    prediction = model.predict(scaler.transform(input_array))[0]
+    probability = model.predict_proba(scaler.transform(input_array))[0]
+    
+    if prediction == 1:
+        st.error(f"🔎 Résultat simulé : ⚠️ Risque élevé (Probabilité: {probability[1]:.2%})")
+    else:
+        st.success(f"🔎 Résultat simulé : ✅ Risque faible (Probabilité: {probability[0]:.2%})")
+
+# ---------- Page 4 : Dossier patient ----------
+elif choice == "📋 Dossier patient":
+    st.title("📋 Dossier Médical Personnel")
+    st.markdown("### Historique de vos analyses")
+    
+    if "patient_history" not in st.session_state:
+        st.session_state.patient_history = []
+
+    with st.expander("Nouvelle analyse", expanded=True):
+        input_data = []
+        cols = st.columns(2)
+        
+        for i, col in enumerate(columns):
+            desc = field_descriptions.get(col, col)
+            with cols[i % 2]:
+                if col == 'Is_Elderly':
+                    val = st.selectbox(desc, [0, 1], key=f"hist_{col}")
+                else:
+                    val = st.number_input(desc, value=float(data[col].median()), key=f"hist_{col}")
+                input_data.append(val)
+
+        if st.button("💾 Enregistrer l'analyse"):
+            input_array = np.array(input_data).reshape(1, -1)
+            pred = model.predict(scaler.transform(input_array))[0]
+            prob = model.predict_proba(scaler.transform(input_array))[0]
+            result = "Risque élevé" if pred == 1 else "Risque faible"
+            
+            analysis = {
+                'date': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
+                'data': input_data,
+                'result': result,
+                'probability': prob[1] if pred == 1 else prob[0]
+            }
+            
+            st.session_state.patient_history.append(analysis)
+            st.success("✅ Analyse enregistrée avec succès")
+
+    # Afficher l'historique
+    if st.session_state.patient_history:
+        st.markdown("### Historique des analyses")
+        history_df = pd.DataFrame([
+            {
+                'Date': analysis['date'],
+                'Résultat': analysis['result'],
+                'Probabilité': f"{analysis['probability']:.2%}"
+            }
+            for analysis in st.session_state.patient_history
+        ])
+        st.dataframe(history_df, use_container_width=True)
 
 # ---------- Page de l'assistant IA ----------
 elif choice == "🤖 Assistant IA":
@@ -318,35 +384,35 @@ elif choice == "🤖 Assistant IA":
             # Recharge la page pour afficher le nouveau message
             st.rerun()
 
-# ---------- Page À propos ----------
+
+
+# ---------- Page 5 : À propos ----------
 elif choice == "ℹ️ À propos":
     st.title("ℹ️ À Propos de DiabPredict")
-    
     st.markdown("""
     ## 🏥 DiabPredict - Assistant Médical IA
     
-    **Version :** 2.0 (avec Gemini LLM)
+    Cette application utilise l'intelligence artificielle pour :
+    - **Prédire le risque de diabète** basé sur vos paramètres médicaux
+    - **Analyser les facteurs de risque** les plus importants
+    - **Simuler l'impact** de différents paramètres cliniques
+    - **Fournir un chatbot médical** alimenté par Hugging Face
     
-    **Objectif :** Fournir des outils d'évaluation et d'information sur le diabète
+    ### 🤖 Chatbot IA
+    Notre assistant virtuel utilise des modèles de langage avancés de Hugging Face pour répondre à vos questions sur le diabète.
     
-    ### Fonctionnalités :
-    - 🩺 Prédiction du risque diabétique
-    - 📊 Analyse des facteurs de risque
-    - 🤖 Assistant conversationnel spécialisé
+    ### ⚠️ Avertissement Médical
+    Cette application est uniquement à des fins éducatives et ne remplace pas un avis médical professionnel.
     
-    ### Technologies :
-    - Modèle DeepSeek via Hugging Face
-    - Random Forest pour la prédiction
-    - Streamlit pour l'interface
+    ### 🔧 Technologies Utilisées
+    - **Streamlit** pour l'interface utilisateur
+    - **Scikit-learn** pour le machine learning
+    - **Hugging Face API** pour l'IA conversationnelle
+    - **Random Forest** pour la prédiction
     
-    ### Avertissement :
-    Cette application ne remplace pas un avis médical professionnel.
-    Les résultats fournis sont à titre informatif uniquement.
-    
-    ### Développement :
-    Application développée à des fins éducatives.
-    
-    © 2025 DiabPredict - Tous droits réservés
+    ---
+    **Développé avec ❤️ pour la prévention du diabète**
+       © 2025 DiabPredict - Tous droits réservés
     """)
 
 # ---------- Pied de page ----------
