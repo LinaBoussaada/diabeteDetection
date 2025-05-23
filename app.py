@@ -415,10 +415,10 @@ elif choice == "ℹ️ À propos":
     - **Prédire le risque de diabète** basé sur vos paramètres médicaux
     - **Analyser les facteurs de risque** les plus importants
     - **Simuler l'impact** de différents paramètres cliniques
-    - **Fournir un chatbot médical** alimenté par Hugging Face
+    - **Fournir un chatbot médical** alimenté par Gemini
     
     ### 🤖 Chatbot IA
-    Notre assistant virtuel utilise des modèles de langage avancés de Hugging Face pour répondre à vos questions sur le diabète.
+    Notre assistant virtuel utilise des modèles de langage avancés de Gemini pour répondre à vos questions sur le diabète.
     
     ### ⚠️ Avertissement Médical
     Cette application est uniquement à des fins éducatives et ne remplace pas un avis médical professionnel.
@@ -426,7 +426,7 @@ elif choice == "ℹ️ À propos":
     ### 🔧 Technologies Utilisées
     - **Streamlit** pour l'interface utilisateur
     - **Scikit-learn** pour le machine learning
-    - **Hugging Face API** pour l'IA conversationnelle
+    - **Gemini API** pour l'IA conversationnelle
     - **Random Forest** pour la prédiction
     
     ---
