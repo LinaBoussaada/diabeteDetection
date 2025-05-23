@@ -9,7 +9,24 @@ import google.generativeai as genai
 genai.configure(api_key="AIzaSyCErMko7fBRNH4MMmdGvKimnBbgeISh7Bc")
 
 modelgem = genai.GenerativeModel("models/gemini-1.5-flash")
+# ---------- Dictionnaire des descriptions des paramètres ----------
+field_descriptions = {
+    'Pregnancies': 'Nombre de grossesses',
+    'Glucose': 'Taux de glucose (mg/dL)',
+    'BloodPressure': 'Pression artérielle diastolique (mmHg)',
+    'SkinThickness': 'Épaisseur du pli cutané tricipital (mm)',
+    'Insulin': 'Insuline sérique (mu U/ml)',
+    'BMI': 'Indice de masse corporelle (kg/m²)',
+    'DiabetesPedigreeFunction': 'Fonction pedigree diabétique',
+    'Age': 'Âge (années)',
+    'Glucose_to_BMI': 'Ratio Glucose/IMC',
+    'Insulin_to_Glucose': 'Ratio Insuline/Glucose',
+    'Is_Elderly': 'Senior (>50 ans) : 0=Non, 1=Oui'
+}
 
+# ---------- Initialisation des états de session ----------
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
 # ---------- Initialisation des états de session ----------
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
@@ -317,6 +334,8 @@ elif choice == "📋 Dossier patient":
             for analysis in st.session_state.patient_history
         ])
         st.dataframe(history_df, use_container_width=True)
+
+
 
 # ---------- Page de l'assistant IA ----------
 elif choice == "🤖 Assistant IA":
