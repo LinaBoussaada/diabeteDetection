@@ -19,3 +19,4 @@ Cible : Outcome (0 = non diabétique, 1 = diabétique)
 Code Python (Notebook + script)
 
 Interface graphique (Streamlit) via link : https://jpqjbwzybzedjprx5ay2th.streamlit.app/
+![image](https://github.com/user-attachments/assets/8b83d537-d774-4cb0-acae-bbf4f1797163)
